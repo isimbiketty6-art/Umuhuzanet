@@ -19,6 +19,7 @@ import {
 export function ProductCatalog({
   products,
   lang,
+  rwfPerUsd = 1385,
   selectedCategory,
   setSelectedCategory,
   searchQuery,
@@ -28,6 +29,7 @@ export function ProductCatalog({
 }: {
   products: AgriProduct[];
   lang: Language;
+  rwfPerUsd?: number;
   selectedCategory: AgriCategory | 'All';
   setSelectedCategory: (c: AgriCategory | 'All') => void;
   searchQuery: string;
@@ -78,12 +80,18 @@ export function ProductCatalog({
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest">
             <Package size={14} />
             <span>{t.featuredProducts}</span>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 font-mono text-[10px] text-emerald-300">
+              LIVE FX: 1 USD = {rwfPerUsd.toLocaleString()} RWF
+            </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
             {lang === 'rw' ? 'Umusaruro Ugezweho wo mu Rwanda' : 'Fresh Farm Harvest & Produce'}
           </h2>
           <p className="text-xs text-emerald-300/70 mt-0.5">
-            {filteredProducts.length} {lang === 'rw' ? 'ibicuruzwa byabonetse' : 'available farm listings ready for delivery'}
+            {filteredProducts.length}{' '}
+            {lang === 'rw'
+              ? 'ibicuruzwa byabonetse'
+              : 'live farm listings indexed to Rwanda e-Soko & global markets'}
           </p>
         </div>
 
@@ -182,12 +190,37 @@ export function ProductCatalog({
               {/* Price & Action Strip */}
               <div className="p-4 pt-0 border-t border-emerald-500/10 mt-2 bg-[#091610]/40">
                 <div className="flex items-baseline justify-between py-2">
-                  <div className="text-xs text-emerald-400 font-medium">
-                    {lang === 'rw' ? 'Igiciro:' : 'Price:'}
+                  <div>
+                    <div className="text-xs text-emerald-400 font-medium">
+                      {lang === 'rw' ? 'Igiciro:' : 'Live Market Price:'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      Stock: {prod.stockQuantity} {prod.unit}
+                    </div>
                   </div>
-                  <div className="text-base font-black text-white font-mono">
-                    RWF {prod.pricePerUnit.toLocaleString()}
-                    <span className="text-xs text-emerald-300/80 font-normal">/{prod.unit}</span>
+                  <div className="text-right">
+                    <div className="text-base font-black text-white font-mono">
+                      RWF {prod.pricePerUnit.toLocaleString()}
+                      <span className="text-xs text-emerald-300/80 font-normal">/{prod.unit}</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-emerald-300/80">
+                      ≈ $
+                      {(
+                        prod.usdEquivalent ??
+                        Math.round((prod.pricePerUnit / rwfPerUsd) * 100) / 100
+                      ).toFixed(2)}{' '}
+                      USD
+                      {typeof prod.marketTrendPct === 'number' && (
+                        <span
+                          className={`ml-1.5 ${
+                            prod.marketTrendPct >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          }`}
+                        >
+                          ({prod.marketTrendPct >= 0 ? '+' : ''}
+                          {prod.marketTrendPct}%)
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -228,11 +261,12 @@ export function ProductCatalog({
                   </button>
 
                   <button
+                    disabled={prod.stockQuantity <= 0}
                     onClick={() => onAddToCart(prod, qty)}
-                    className="col-span-3 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-[#072416] py-2 px-3 rounded-xl font-bold text-xs transition shadow-md shadow-emerald-900/20 active:scale-95"
+                    className="col-span-3 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-[#072416] py-2 px-3 rounded-xl font-bold text-xs transition shadow-md shadow-emerald-900/20 active:scale-95 disabled:opacity-40"
                   >
                     <ShoppingCart size={13} />
-                    <span>{t.addToCart}</span>
+                    <span>{prod.stockQuantity <= 0 ? 'Out of Stock' : t.addToCart}</span>
                   </button>
                 </div>
               </div>

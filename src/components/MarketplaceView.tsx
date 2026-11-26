@@ -1,17 +1,19 @@
 import { useState, useMemo } from 'react';
 import { Product } from '../types';
 import { ASSETS } from '../data/assets';
-import { Search, Plus, Send, Star, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { Search, Plus, Send, Star, ShieldCheck, ShoppingBag, ShoppingCart } from 'lucide-react';
 
 export function MarketplaceView({
   products,
   onOpenAddProduct,
   onOpenContactSeller,
+  onAddToCart,
   notify
 }: {
   products: Product[];
   onOpenAddProduct: () => void;
   onOpenContactSeller: (product: Product) => void;
+  onAddToCart?: (product: Product) => void;
   notify: (msg: string) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -164,12 +166,22 @@ export function MarketplaceView({
                   <span className="text-sm font-bold text-mint font-mono">{p.price}</span>
                 </div>
 
-                <button
-                  onClick={() => onOpenContactSeller(p)}
-                  className="flex items-center gap-1.5 rounded-xl border border-mint/20 bg-mint/10 px-3.5 py-2 text-xs font-semibold text-mint hover:bg-mint/20 transition"
-                >
-                  <Send size={12} /> Contact Seller
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onOpenContactSeller(p)}
+                    className="flex items-center gap-1.5 rounded-xl border border-mint/20 bg-mint/10 px-3 py-2 text-xs font-semibold text-mint hover:bg-mint/20 transition"
+                  >
+                    <Send size={12} /> Contact
+                  </button>
+                  {onAddToCart && (
+                    <button
+                      onClick={() => onAddToCart(p)}
+                      className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3 py-2 text-xs font-bold text-[#07211e] transition shadow-sm"
+                    >
+                      <ShoppingCart size={12} /> Add to Cart
+                    </button>
+                  )}
+                </div>
               </div>
             </article>
           );

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Job, Product, UserActivity, Section } from '../types';
 import { AGRI_ASSETS } from '../data/assets';
+import { LiveMarketNewsBoard } from './LiveMarketNewsBoard';
+import { LiveEconomySnapshot, LiveNewsItem } from '../utils/realtimeClient';
 import {
   Search,
   Briefcase,
@@ -40,7 +42,12 @@ interface OverviewViewProps {
   onOpenCopilot: () => void;
   notify: (msg: string) => void;
   onSwitchToAdmin?: () => void;
+  isAdmin?: boolean;
   userName?: string;
+  liveEconomy?: LiveEconomySnapshot | null;
+  liveNews?: LiveNewsItem[];
+  onlineUsersCount?: number;
+  onRefreshLiveFeeds?: () => Promise<void>;
   onOpenMessageWith?: (name: string, role: string) => void;
 }
 
@@ -56,7 +63,12 @@ export function OverviewView({
   onOpenCopilot,
   notify,
   onSwitchToAdmin,
+  isAdmin = false,
   userName = 'Aline',
+  liveEconomy = null,
+  liveNews = [],
+  onlineUsersCount = 1,
+  onRefreshLiveFeeds,
   onOpenMessageWith
 }: OverviewViewProps) {
   // Checklist for "Your Progress" (matching home.png & new.png)
@@ -200,7 +212,7 @@ export function OverviewView({
             </div>
           </div>
 
-          {onSwitchToAdmin && (
+          {isAdmin && onSwitchToAdmin && (
             <button
               onClick={onSwitchToAdmin}
               className="flex items-center gap-1.5 rounded-2xl border border-purple-500/30 bg-purple-500/15 hover:bg-purple-500/25 px-3 py-2 text-xs font-bold text-purple-200 transition shadow-sm"
@@ -664,6 +676,17 @@ export function OverviewView({
           </div>
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* 5. REAL-TIME RWANDA & GLOBAL MARKET RATES + NEWS         */}
+      {/* ======================================================== */}
+      <LiveMarketNewsBoard
+        economy={liveEconomy}
+        news={liveNews}
+        onlineUsersCount={onlineUsersCount}
+        onRefresh={onRefreshLiveFeeds || (async () => {})}
+        compact
+      />
     </div>
   );
 }

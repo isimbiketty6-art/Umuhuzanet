@@ -120,7 +120,7 @@ export function Sidebar({
     });
   };
 
-  const isAdmin = role === 'Administrator' || currentUser?.role === 'Administrator';
+  const isAdmin = currentUser?.role === 'Administrator';
 
   return (
     <>
@@ -210,20 +210,6 @@ export function Sidebar({
               )
             )}
           </div>
-
-          {/* Quick Real Credentials Directory button */}
-          {onOpenCredentialsDirectory && (
-            <button
-              onClick={() => handleAction(onOpenCredentialsDirectory)}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-mint/30 bg-mint/10 text-[11px] font-semibold text-mint hover:bg-mint/20 transition group"
-            >
-              <div className="flex items-center gap-1.5">
-                <KeyRound size={13} className="text-mint shrink-0" />
-                <span>Real Credentials Directory</span>
-              </div>
-              <ChevronRight size={13} className="text-mint/60 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          )}
         </div>
 
         {/* Scrollable Arranged Features Navigation List */}
@@ -278,23 +264,25 @@ export function Sidebar({
               </span>
             </button>
 
-            {/* Executive Admin Center (Image 3 & 4) */}
-            <button
-              onClick={() => handleSelectSection('Admin Center')}
-              className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-xs font-medium transition ${
-                section === 'Admin Center'
-                  ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-900/30'
-                  : 'text-purple-300 hover:bg-purple-950/40 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Crown size={16} className="text-purple-400" />
-                <span>Executive Admin Center</span>
-              </div>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-200 border border-purple-500/30 font-bold font-mono">
-                Image 3 & 4
-              </span>
-            </button>
+            {/* Executive Admin Center (Shown strictly to verified Administrators) */}
+            {isAdmin && (
+              <button
+                onClick={() => handleSelectSection('Admin Center')}
+                className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-xs font-medium transition ${
+                  section === 'Admin Center'
+                    ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-900/30'
+                    : 'text-purple-300 hover:bg-purple-950/40 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Crown size={16} className="text-purple-400" />
+                  <span>Executive Admin Center</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-200 border border-purple-500/30 font-bold font-mono">
+                  Admin
+                </span>
+              </button>
+            )}
 
             {/* Specialized Portals (Seeker / Seller / Connection) */}
             <button

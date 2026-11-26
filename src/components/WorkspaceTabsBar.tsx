@@ -36,7 +36,8 @@ export function WorkspaceTabsBar({
   onSwitchToAgriMarketplace,
   unreadMessagesCount = 2,
   savedJobsCount = 2,
-  invoicesCount = 3
+  invoicesCount = 3,
+  isAdmin = false
 }: {
   currentSection: Section;
   onSelectSection: (section: Section | 'Admin Center') => void;
@@ -47,6 +48,7 @@ export function WorkspaceTabsBar({
   unreadMessagesCount?: number;
   savedJobsCount?: number;
   invoicesCount?: number;
+  isAdmin?: boolean;
 }) {
   const allTabs: TabItem[] = [
     {
@@ -107,12 +109,12 @@ export function WorkspaceTabsBar({
       id: 'Settings',
       name: 'Settings',
       icon: Settings,
-      description: 'Profile, district, NIDA verification & simulated roles'
+      description: 'Profile, district, NIDA verification & account security'
     }
   ];
 
-  // If user is Admin, insert Admin Center tab
-  if (role === 'Administrator') {
+  // Only insert Admin Center tab when the authenticated user is a verified Administrator
+  if (isAdmin) {
     allTabs.splice(7, 0, {
       id: 'Admin Center',
       name: 'Admin Center',

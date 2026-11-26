@@ -28,6 +28,9 @@ export interface AgriProduct {
   nameRw: string;
   category: AgriCategory;
   pricePerUnit: number;
+  usdEquivalent?: number;
+  marketTrendPct?: number;
+  marketBenchmarkNote?: string;
   unit: 'kg' | 'liter' | 'sack (50kg)' | 'crate' | 'head' | 'piece' | 'tray';
   location: string;
   district: string;
@@ -69,6 +72,7 @@ export interface AgriOrder {
     subtotal: number;
   }[];
   totalAmount: number;
+  usdEquivalent?: number;
   status: 'Pending' | 'Processing' | 'Delivered' | 'Cancelled';
   createdAt: string;
   sellerName: string;

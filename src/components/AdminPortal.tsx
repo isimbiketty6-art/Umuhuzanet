@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Language } from '../types/agri';
+import { authStorage } from '../utils/authStorage';
 import {
   Users,
   Briefcase,
@@ -48,6 +49,36 @@ export function AdminPortal({
 
   // Search in Recent Users table
   const [userSearch, setUserSearch] = useState('');
+
+  // Server-verified Admin status & live telemetry
+  const [serverStats, setServerStats] = useState<{
+    authorized: boolean;
+    registeredUsersCount: number;
+    activeSessionsCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    authStorage.fetchAdminOverview().then((res) => {
+      if (!mounted) return;
+      if (res.authorized) {
+        setServerStats({
+          authorized: true,
+          registeredUsersCount: res.registeredUsersCount ?? 0,
+          activeSessionsCount: res.activeSessionsCount ?? 0
+        });
+      } else {
+        setServerStats({
+          authorized: false,
+          registeredUsersCount: 0,
+          activeSessionsCount: 0
+        });
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // 12 Products for ShopPoint Product Grid (uhm.jfif)
   const [productsList, setProductsList] = useState([
@@ -238,7 +269,13 @@ export function AdminPortal({
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-300">
-            Here&apos;s what&apos;s happening on Umuhuza Connect today.  📅 22 Oct 2026, 10:24 AM
+            Here&apos;s what&apos;s happening on Umuhuza Connect today.
+            {serverStats?.authorized && (
+              <span className="ml-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[11px] font-mono text-emerald-300">
+                <ShieldCheck size={12} />
+                Server Verified · {serverStats.registeredUsersCount} Accounts · {serverStats.activeSessionsCount} Active Sessions
+              </span>
+            )}
           </p>
         </div>
 

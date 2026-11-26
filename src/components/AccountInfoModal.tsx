@@ -4,45 +4,43 @@ import {
   ShieldCheck,
   KeyRound,
   User,
-  Clock,
   RefreshCw,
   LogOut,
   Smartphone,
   MapPin,
   CheckCircle2,
-  Copy,
-  Check,
-  AlertTriangle,
-  Lock,
-  ChevronRight
+  Lock
 } from 'lucide-react';
-import { AuthUser, authStorage, UserSession } from '../utils/authStorage';
-import { UserRole } from '../types';
+import { AuthUser, authStorage, UserSession, checkPasswordStrength } from '../utils/authStorage';
 
 export function AccountInfoModal({
   isOpen,
   onClose,
   currentUser,
   onLogout,
-  onSwitchAccount,
   notify
 }: {
   isOpen: boolean;
   onClose: () => void;
   currentUser: AuthUser | null;
   onLogout: () => void;
-  onSwitchAccount: (role: UserRole) => void;
   notify: (msg: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'info' | 'session' | 'authorization'>('info');
   const [session, setSession] = useState<UserSession | null>(null);
-  const [copiedToken, setCopiedToken] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string>('');
+
+  // Change Password Form State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwMessage, setPwMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [pwLoading, setPwLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      const active = authStorage.getActiveSession();
-      setSession(active);
+      setSession(authStorage.getActiveSession());
+      setPwMessage(null);
     }
   }, [isOpen, currentUser]);
 
@@ -66,21 +64,43 @@ export function AccountInfoModal({
 
   if (!isOpen) return null;
 
-  const handleCopyToken = () => {
-    if (session?.token) {
-      navigator.clipboard.writeText(session.token);
-      setCopiedToken(true);
-      notify('Session token copied to clipboard');
-      setTimeout(() => setCopiedToken(false), 2000);
-    }
-  };
+  const isAdmin = currentUser?.role === 'Administrator';
+  const isSellerOrEmployer = currentUser?.role === 'Seller' || currentUser?.role === 'Employer';
 
-  const handleRenewSession = () => {
-    const refreshed = authStorage.refreshSession();
+  const handleRenewSession = async () => {
+    const refreshed = await authStorage.refreshSession();
     if (refreshed) {
       setSession({ ...refreshed });
       notify('Session renewed! Token extended for an additional 24 hours.');
+    } else {
+      notify('Session expired. Please sign in again.');
     }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwMessage(null);
+    const strength = checkPasswordStrength(newPassword);
+    if (!strength.valid) {
+      setPwMessage({ type: 'err', text: `Missing: ${strength.missing.join(', ')}` });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwMessage({ type: 'err', text: 'New passwords do not match.' });
+      return;
+    }
+    setPwLoading(true);
+    const res = await authStorage.changePassword(currentPassword, newPassword);
+    setPwLoading(false);
+    if (!res.success) {
+      setPwMessage({ type: 'err', text: res.message });
+      return;
+    }
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPwMessage({ type: 'ok', text: res.message });
+    notify(res.message);
   };
 
   return (
@@ -100,7 +120,7 @@ export function AccountInfoModal({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Rwanda National ID Verification • Active Token Session • RBAC Access
+                Rwanda National ID Verification • Server Session • Role Permissions
               </p>
             </div>
           </div>
@@ -137,7 +157,7 @@ export function AccountInfoModal({
             }`}
           >
             <KeyRound size={14} />
-            <span>Active Session & Token</span>
+            <span>Session & Password</span>
           </button>
 
           <button
@@ -149,7 +169,7 @@ export function AccountInfoModal({
             }`}
           >
             <ShieldCheck size={14} />
-            <span>Role Authorization (RBAC)</span>
+            <span>Account Permissions</span>
           </button>
         </div>
 
@@ -181,7 +201,6 @@ export function AccountInfoModal({
                     </div>
                   </div>
 
-                  {/* Identity Data Table */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/10">
                       <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mb-1">
@@ -189,10 +208,10 @@ export function AccountInfoModal({
                         <span>Rwanda National ID (NIDA)</span>
                       </div>
                       <div className="font-mono font-bold text-white text-sm tracking-wider">
-                        {currentUser.nationalId || '1199880012345678'}
+                        {currentUser.nationalId}
                       </div>
                       <div className="text-[10px] text-emerald-400/90 mt-1">
-                        ✓ Verified with National Identification Agency (NIDA)
+                        ✓ Verified against NIDA format standard
                       </div>
                     </div>
 
@@ -205,7 +224,7 @@ export function AccountInfoModal({
                         {currentUser.phone}
                       </div>
                       <div className="text-[10px] text-emerald-400/90 mt-1">
-                        ✓ Linked to MTN/Airtel MoMo Escrow Account
+                        ✓ Verified Rwandan mobile line
                       </div>
                     </div>
 
@@ -215,7 +234,7 @@ export function AccountInfoModal({
                         <span>Administrative District</span>
                       </div>
                       <div className="font-bold text-white text-sm">
-                        {currentUser.district || 'Gasabo (Kigali Province)'}
+                        {currentUser.district}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1">Republic of Rwanda</div>
                     </div>
@@ -223,7 +242,7 @@ export function AccountInfoModal({
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/10">
                       <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mb-1">
                         <User size={13} className="text-emerald-400" />
-                        <span>Platform Role</span>
+                        <span>Authorized Role</span>
                       </div>
                       <div className="font-bold text-emerald-300 text-sm">
                         {currentUser.role}
@@ -242,41 +261,21 @@ export function AccountInfoModal({
             </div>
           )}
 
-          {/* TAB 2: ACTIVE SESSION & TOKEN */}
+          {/* TAB 2: SESSION & PASSWORD */}
           {activeTab === 'session' && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-bold text-white">Active Cryptographic Session</span>
+                    <span className="text-xs font-bold text-white">Active Server Session</span>
                   </div>
                   <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30">
                     24-Hour TTL
                   </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-slate-400">Bearer Session Token</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={session?.token || 'umz_sess_anon_guest_expired'}
-                      className="w-full rounded-xl border border-white/10 bg-[#041119] px-3 py-2 text-xs font-mono text-emerald-300 select-all"
-                    />
-                    <button
-                      onClick={handleCopyToken}
-                      className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white font-medium flex items-center gap-1.5 transition"
-                      title="Copy token"
-                    >
-                      {copiedToken ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                      <span className="hidden sm:inline">{copiedToken ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
                   <div className="p-2.5 rounded-xl bg-black/20 border border-white/5">
                     <div className="text-[10px] text-slate-400">Session Remaining</div>
                     <div className="font-mono font-bold text-emerald-400 text-sm mt-0.5">
@@ -284,53 +283,111 @@ export function AccountInfoModal({
                     </div>
                   </div>
                   <div className="p-2.5 rounded-xl bg-black/20 border border-white/5">
-                    <div className="text-[10px] text-slate-400">Node Location</div>
+                    <div className="text-[10px] text-slate-400">Session Storage</div>
                     <div className="font-mono font-bold text-white text-xs mt-0.5">
-                      {session?.sessionIp || 'Kigali (RW)'}
+                      Signed In-Memory Bearer
                     </div>
                   </div>
                   <div className="p-2.5 rounded-xl bg-black/20 border border-white/5">
-                    <div className="text-[10px] text-slate-400">Session Device</div>
+                    <div className="text-[10px] text-slate-400">Origin IP</div>
                     <div className="font-mono font-bold text-slate-300 text-xs mt-0.5 truncate">
-                      {session?.deviceId || 'Web Client'}
+                      {session?.sessionIp || 'Kigali (RW)'}
                     </div>
                   </div>
                 </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    onClick={handleRenewSession}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition shadow-sm"
+                  >
+                    <RefreshCw size={14} />
+                    <span>Renew Session (+24h)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      onClose();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-bold border border-red-500/30 transition shadow-sm"
+                  >
+                    <LogOut size={14} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={handleRenewSession}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition shadow-sm"
+              {!isAdmin && currentUser && (
+                <form
+                  onSubmit={handleChangePassword}
+                  className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3"
                 >
-                  <RefreshCw size={14} />
-                  <span>Renew Active Session (+24h)</span>
-                </button>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <Lock size={14} className="text-emerald-400" />
+                    <span>Update Account Password</span>
+                  </div>
 
-                <button
-                  onClick={() => {
-                    onLogout();
-                    onClose();
-                  }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-bold border border-red-500/30 transition shadow-sm"
-                >
-                  <LogOut size={14} />
-                  <span>Terminate Session (Logout)</span>
-                </button>
-              </div>
+                  {pwMessage && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs border ${
+                        pwMessage.type === 'ok'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                          : 'bg-red-500/10 border-red-500/30 text-red-300'
+                      }`}
+                    >
+                      {pwMessage.text}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <input
+                      type="password"
+                      required
+                      placeholder="Current password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="rounded-xl border border-white/10 bg-[#041119] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500/50"
+                    />
+                    <input
+                      type="password"
+                      required
+                      placeholder="New strong password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="rounded-xl border border-white/10 bg-[#041119] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500/50"
+                    />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Confirm new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="rounded-xl border border-white/10 bg-[#041119] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500/50"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={pwLoading}
+                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#04131B] font-bold text-xs transition disabled:opacity-50"
+                  >
+                    {pwLoading ? 'Updating...' : 'Save New Password'}
+                  </button>
+                </form>
+              )}
             </div>
           )}
 
-          {/* TAB 3: ROLE AUTHORIZATION (RBAC) */}
+          {/* TAB 3: ACCOUNT PERMISSIONS (Strictly Scoped to User Role) */}
           {activeTab === 'authorization' && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xs font-bold text-white">Role-Based Access Control (RBAC)</h3>
+                    <h3 className="text-xs font-bold text-white">Authorized Workspace Scope</h3>
                     <p className="text-[11px] text-slate-400">
-                      Security policies governing portal features based on verified credentials.
+                      Features enabled for your verified account role.
                     </p>
                   </div>
                   <span className="text-xs font-bold text-emerald-400 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
@@ -341,76 +398,49 @@ export function AccountInfoModal({
                 <div className="space-y-2 pt-2 text-xs">
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
                     <div>
-                      <div className="font-semibold text-white">Executive Admin Center</div>
+                      <div className="font-semibold text-white">Personal Human OS Workspace</div>
                       <div className="text-[10px] text-slate-400">
-                        ShopPoint management, national transactions, platform audits
-                      </div>
-                    </div>
-                    {currentUser?.role === 'Administrator' ? (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
-                        Granted
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 font-bold text-[10px] border border-red-500/30">
-                        Restricted (Admin Only)
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
-                    <div>
-                      <div className="font-semibold text-white">Harvest & Artisan Marketplace Seller</div>
-                      <div className="text-[10px] text-slate-400">
-                        List agricultural produce, manage inventory, receive MoMo payments
-                      </div>
-                    </div>
-                    {['Seller', 'Administrator'].includes(currentUser?.role || '') ? (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
-                        Granted
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/30">
-                        Requires Seller Account
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
-                    <div>
-                      <div className="font-semibold text-white">Talent & Job Seeker Hub</div>
-                      <div className="text-[10px] text-slate-400">
-                        Apply for Kigali & nationwide vacancies, build skills profile, generate invoices
+                        Apply for vacancies, track skills courses, manage messages & invoices
                       </div>
                     </div>
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
-                      Granted
+                      Authorized
                     </span>
                   </div>
-                </div>
-              </div>
 
-              {/* Quick Role Switcher shortcut */}
-              <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
-                <div className="text-xs font-bold text-white flex items-center justify-between">
-                  <span>Switch Current Role Perspective:</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  {(['Job seeker', 'Seller', 'Administrator', 'Employer'] as UserRole[]).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        onSwitchAccount(r);
-                        onClose();
-                      }}
-                      className={`py-2 px-3 rounded-xl border text-center transition font-semibold ${
-                        currentUser?.role === r
-                          ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
-                          : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
+                  {isSellerOrEmployer && (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
+                      <div>
+                        <div className="font-semibold text-white">
+                          {currentUser?.role === 'Seller'
+                            ? 'Harvest & Artisan Seller Store'
+                            : 'Employer Vacancy Publishing'}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {currentUser?.role === 'Seller'
+                            ? 'List agricultural produce, manage stock & receive MoMo orders'
+                            : 'Publish Kigali vacancies & review candidate pipeline'}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
+                        Authorized
+                      </span>
+                    </div>
+                  )}
+
+                  {isAdmin && (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
+                      <div>
+                        <div className="font-semibold text-white">Executive Admin Center</div>
+                        <div className="text-[10px] text-slate-400">
+                          ShopPoint management, national transactions, platform audits
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px] border border-purple-500/30">
+                        Admin Clearance
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Section, Job, Product } from '../types';
 import { Language } from '../types/agri';
 import { AGRI_ASSETS } from '../data/assets';
+import { LiveMarketNewsBoard } from './LiveMarketNewsBoard';
+import { LiveEconomySnapshot, LiveNewsItem } from '../utils/realtimeClient';
 import {
   Search,
   MapPin,
@@ -20,7 +22,9 @@ import {
   Sparkles,
   ChevronRight,
   Award,
-  Layers
+  Layers,
+  Mail,
+  Phone
 } from 'lucide-react';
 
 interface HomePageViewProps {
@@ -30,6 +34,11 @@ interface HomePageViewProps {
   onSearch: (query: string, location: string) => void;
   featuredJobs: Job[];
   recommendedProducts: Product[];
+  isAdmin?: boolean;
+  liveEconomy?: LiveEconomySnapshot | null;
+  liveNews?: LiveNewsItem[];
+  onlineUsersCount?: number;
+  onRefreshLiveFeeds?: () => Promise<void>;
   notify: (msg: string) => void;
 }
 
@@ -40,6 +49,11 @@ export function HomePageView({
   onSearch,
   featuredJobs,
   recommendedProducts,
+  isAdmin = false,
+  liveEconomy = null,
+  liveNews = [],
+  onlineUsersCount = 1,
+  onRefreshLiveFeeds,
   notify
 }: HomePageViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -307,6 +321,20 @@ export function HomePageView({
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 2B. LIVE RWANDA & WORLD ECONOMIC RATES & NEWS BROADCASTS */}
+      {/* ======================================================== */}
+      <section className="py-10 bg-[#04131B] border-b border-[#19414D]/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <LiveMarketNewsBoard
+            economy={liveEconomy}
+            news={liveNews}
+            onlineUsersCount={onlineUsersCount}
+            onRefresh={onRefreshLiveFeeds || (async () => {})}
+          />
         </div>
       </section>
 
@@ -598,7 +626,9 @@ export function HomePageView({
                 <li><button onClick={() => onNavigate('Career & jobs')} className="hover:text-emerald-300 transition">Find Jobs</button></li>
                 <li><button onClick={() => onNavigate('Marketplace')} className="hover:text-emerald-300 transition">Marketplace (Isoko)</button></li>
                 <li><button onClick={() => onNavigate('Learning')} className="hover:text-emerald-300 transition">Skills & Courses</button></li>
-                <li><button onClick={() => onNavigate('Admin Center')} className="hover:text-emerald-300 transition">Admin Center</button></li>
+                {isAdmin && (
+                  <li><button onClick={() => onNavigate('Admin Center')} className="hover:text-emerald-300 transition">Admin Center</button></li>
+                )}
               </ul>
             </div>
 
@@ -613,24 +643,45 @@ export function HomePageView({
             </div>
 
             <div>
-              <div className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">Trust & Support</div>
-              <ul className="space-y-2">
-                <li><a href="#about" onClick={(e) => { e.preventDefault(); notify('Umuhuza Connect — Built for Rwanda'); }} className="hover:text-emerald-300 transition">About Umuhuza</a></li>
-                <li><a href="#privacy" onClick={(e) => { e.preventDefault(); notify('Data Protection compliant with Rwanda NCSA regulations'); }} className="hover:text-emerald-300 transition">Privacy Policy</a></li>
-                <li><a href="#terms" onClick={(e) => { e.preventDefault(); notify('Terms of Service: Fair trade and community standards'); }} className="hover:text-emerald-300 transition">Terms & Safety</a></li>
-                <li><button onClick={() => onOpenAuth('signin')} className="hover:text-emerald-300 transition">Sign In</button></li>
+              <div className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">Contact &amp; Support</div>
+              <ul className="space-y-2.5 text-slate-300">
+                <li className="flex items-center gap-2">
+                  <Mail size={13} className="text-emerald-400 shrink-0" />
+                  <a href="mailto:izeredeveloper@gmail.com" className="hover:text-emerald-300 transition break-all">
+                    izeredeveloper@gmail.com
+                  </a>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Mail size={13} className="text-teal-400 shrink-0" />
+                  <a href="mailto:umuhuzanet@outlook.com" className="hover:text-emerald-300 transition break-all">
+                    umuhuzanet@outlook.com
+                  </a>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Phone size={13} className="text-emerald-400 shrink-0" />
+                  <a href="tel:+250796916332" className="hover:text-emerald-300 font-mono transition">
+                    0796916332
+                  </a>
+                </li>
+                <li className="pt-1">
+                  <button onClick={() => onOpenAuth('signin')} className="text-emerald-400 font-semibold hover:text-emerald-300 transition">
+                    Sign In →
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
+          <div className="pt-8 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
             <div>
-              © 2026 Umuhuza Connect. All rights reserved. Kigali, Rwanda.
+              © 2026 Umuhuza Connect. Kigali, Rwanda. · <span className="text-emerald-300 font-semibold">Developed by Izere Elias</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span>A Human OS for a Better Tomorrow</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span>Contact: izeredeveloper@gmail.com</span>
               <span>•</span>
-              <span>English / Ikinyarwanda</span>
+              <span>Support: umuhuzanet@outlook.com</span>
+              <span>•</span>
+              <span className="font-mono">Tel: 0796916332</span>
             </div>
           </div>
         </div>
